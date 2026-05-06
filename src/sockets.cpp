@@ -1,4 +1,5 @@
 #include <string>
+#include <thread>
 #include <sockets.hpp>
 #include <options.hpp>
 #include <nlohmann/json.hpp>
@@ -51,25 +52,24 @@ void initialize_socket() {
         if (std::filesystem::exists(socketfile)) {
             std::filesystem::remove(socketfile);
         }
-
-        //limhamn::socket::uds_server server(socketfile, handler, "\n", true);
-        netkit::sock::addr addr(socketfile);
-	netkit::sock::sync_sock sock(addr, netkit::sock::type::unix);
+		
+        netkit::sock::addr saddr(socketfile);
+		netkit::sock::sync_sock sock(saddr, netkit::sock::type::uds);
 	
-	sock.bind();
-	sock.listen();
+		sock.bind();
+		sock.listen();
 	
-	while (true) {
-		auto rec = sock.accept();
-		auto buffer = rec->recv(-1, "\n");	
-		if (buffer.data.empty() == false) {
-			auto ret = handler(buffer.data);
+		while (true) {
+			auto rec = sock.accept();
+			auto buffer = rec->recv(-1, "\n");	
+			if (buffer.data.empty() == false) {
+				auto ret = handler(buffer.data);
 			
-			if (!ret.empty()) {
-				rec->send(ret);
+				if (!ret.empty()) {
+					rec->send(ret);
+				}
 			}
 		}
-	}
     });
 
     t.detach();
