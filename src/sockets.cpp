@@ -11,7 +11,8 @@
 #include <wl/wayland.hpp>
 #endif
 #include <config/config.hpp>
-#include <netkit/sock/sync_sock.hpp>
+#include <netkit/uds/uds_server.hpp>
+#include <netkit/uds/uds_stream.hpp>
 
 using json = nlohmann::json;
 
@@ -54,22 +55,45 @@ void initialize_socket() {
         }
 		
         netkit::sock::addr saddr(socketfile);
-		netkit::sock::sync_sock sock(saddr, netkit::sock::type::uds);
+	netkit::uds::uds_server sock(saddr);
 	
-		sock.bind();
-		sock.listen();
+	sock.bind();
+	sock.listen();
 	
+	while (true) {
+		auto rec = sock.accept();
+		std::string data;
+		char buffer[4096];
+
 		while (true) {
-			auto rec = sock.accept();
-			auto buffer = rec->recv(-1, "\n");	
-			if (buffer.data.empty() == false) {
-				auto ret = handler(buffer.data);
+			const auto [bytes, status] = rec->read(buffer, sizeof(buffer));
 			
-				if (!ret.empty()) {
-					rec->send(ret);
-				}
+			if (status == netkit::stream::stream_status::error) {
+				data.clear();
+				break;
+			}
+
+			data.append(buffer, bytes);
+
+			int pos = data.find_last_of('\n');
+			if (pos != std::string::npos) {
+				data = data.substr(0, pos);
+				break;
+			}
+
+			if (status == netkit::stream::stream_status::eof) {
+				break;
 			}
 		}
+		
+		if (data.empty() == false) {
+			auto ret = handler(data);
+			
+			if (!ret.empty()) {
+				rec->write_all(ret);
+			}
+		}
+	}
     });
 
     t.detach();
