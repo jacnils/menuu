@@ -54,7 +54,7 @@ void initialize_socket() {
             std::filesystem::remove(socketfile);
         }
 		
-        netkit::sock::addr saddr(socketfile);
+        netkit::socket::addr saddr(socketfile);
 	netkit::uds::uds_server sock(saddr);
 	
 	sock.bind();
