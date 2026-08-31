@@ -15,27 +15,29 @@ void resource_load(XrmDatabase db, const std::string& name, resource_type rtype,
     XrmValue ret;
 
     XrmGetResource(db, fullname.c_str(), "*", &type, &ret);
-    if (!xresources || ret.addr == nullptr || strncmp("String", type, 64) != 0) {
+    if (!xresources || type == nullptr || ret.addr == nullptr || std::strcmp(type, "String") != 0) {
         return;
     }
 
     try {
         switch (rtype) {
-        case String: {
-                auto& sdst = std::any_cast<std::string&>(dst);
-                sdst = std::string(ret.addr);
+            case String: {
+                auto* sdst = std::any_cast<std::string*>(dst);
+                *sdst = ret.addr;
                 break;
-        }
-        case Integer: {
-                auto& idst = std::any_cast<int&>(dst);
-                idst = std::stoi(ret.addr);
+            }
+
+            case Integer: {
+                auto* idst = std::any_cast<int*>(dst);
+                *idst = std::stoi(ret.addr);
                 break;
-        }
-        case Float: {
-                auto& fdst = std::any_cast<float&>(dst);
-                fdst = std::stof(ret.addr);
+            }
+
+            case Float: {
+                auto* fdst = std::any_cast<float*>(dst);
+                *fdst = std::stof(ret.addr);
                 break;
-        }
+            }
         }
     } catch (const std::bad_any_cast& e) {
         fprintf(stderr, "Error: %s\n", e.what());
